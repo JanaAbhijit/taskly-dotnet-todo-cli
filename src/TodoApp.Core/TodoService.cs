@@ -8,16 +8,31 @@ public class TodoService
 {
     private readonly List<TodoItem> _items = new();
     private readonly Func<DateTimeOffset> _clock;
+    private readonly ITodoStore? _store;
     private int _nextId = 1;
 
     /// <param name="clock">
     /// Optional time source, injected for deterministic tests.
     /// Defaults to <see cref="DateTimeOffset.UtcNow"/>.
     /// </param>
-    public TodoService(Func<DateTimeOffset>? clock = null)
+    /// <param name="store">
+    /// Optional persistence backend. When supplied, existing items are loaded
+    /// on construction and every mutating operation is persisted. When null,
+    /// the service is purely in-memory.
+    /// </param>
+    public TodoService(Func<DateTimeOffset>? clock = null, ITodoStore? store = null)
     {
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
+        _store = store;
+
+        if (_store is not null)
+        {
+            _items.AddRange(_store.Load());
+            _nextId = _items.Count == 0 ? 1 : _items.Max(i => i.Id) + 1;
+        }
     }
+
+    private void Persist() => _store?.Save(_items);
 
     /// <summary>Adds a new item and returns it.</summary>
     /// <exception cref="ArgumentException">Title is null or whitespace.</exception>
@@ -28,6 +43,7 @@ public class TodoService
 
         var item = new TodoItem(_nextId++, title.Trim(), _clock());
         _items.Add(item);
+        Persist();
         return item;
     }
 
@@ -47,6 +63,7 @@ public class TodoService
         var item = Find(id);
         if (item is null) return false;
         item.IsDone = true;
+        Persist();
         return true;
     }
 
@@ -56,6 +73,7 @@ public class TodoService
         var item = Find(id);
         if (item is null) return false;
         item.IsDone = false;
+        Persist();
         return true;
     }
 
@@ -65,6 +83,7 @@ public class TodoService
         var item = Find(id);
         if (item is null) return false;
         _items.Remove(item);
+        Persist();
         return true;
     }
 

@@ -8,14 +8,11 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from .service import TodoService
+from .store import JsonTodoStore
 
 
 def main() -> None:
-    service = TodoService()
-
-    # Seed a couple of items so a fresh run isn't empty.
-    service.add("Try the todo app")
-    service.add("Read the help with: help")
+    service = TodoService(store=JsonTodoStore("todos.json"))
 
     print("Simple Todo. Type 'help' for commands, 'quit' to exit.")
     print_list(service)

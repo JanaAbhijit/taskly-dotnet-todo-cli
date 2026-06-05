@@ -2,5 +2,6 @@
 
 from .item import TodoItem
 from .service import TodoService
+from .store import JsonTodoStore
 
-__all__ = ["TodoItem", "TodoService"]
+__all__ = ["TodoItem", "TodoService", "JsonTodoStore"]

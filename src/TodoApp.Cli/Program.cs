@@ -1,10 +1,7 @@
 using TodoApp.Core;
 
-var service = new TodoService();
-
-// Seed a couple of items so a fresh run isn't empty.
-service.Add("Try the todo app");
-service.Add("Read the help with: help");
+var store = new JsonTodoStore("todos.json");
+var service = new TodoService(store: store);
 
 Console.WriteLine("Simple Todo. Type 'help' for commands, 'quit' to exit.");
 PrintList(service);

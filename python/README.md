@@ -10,20 +10,26 @@ Dependencies point inward — `cli → service → item`; `item` depends on noth
 
 - **`todoapp/item.py`** — the `TodoItem` entity (a dataclass): `id`, `title`,
   `is_done`, `created_at`, and a `__str__` that renders e.g. `[x] #3 buy milk`.
-- **`todoapp/service.py`** — `TodoService`: in-memory store and operations
+- **`todoapp/service.py`** — `TodoService`: store and operations
   (`add`, `complete`, `reopen`, `remove`, `find`, `get_all`, `get_by_status`,
-  `count`). Uses a monotonic id counter and an injectable clock.
+  `count`). Uses a monotonic id counter and an injectable clock. Accepts an
+  optional `store`; when present it loads items on startup and saves after
+  every mutation.
+- **`todoapp/store.py`** — `JsonTodoStore`: reads/writes items as indented
+  JSON (`load()` / `save()`). Datetimes are stored as ISO-8601 strings; a
+  missing file loads to an empty list.
 - **`todoapp/cli.py`** — thin REPL. Parses a line into command + argument and
   dispatches to `TodoService`. Holds no business rules. Commands: `add`,
   `list`, `done`, `reopen`, `remove`/`rm`, `help`, `quit`/`exit`.
-- **`tests/test_todo.py`** — 15 pytest tests against the core package.
+- **`tests/test_todo.py`** — 21 pytest tests against the core package
+  (service operations, item rendering, and JSON persistence).
 
 ## Commands
 
 ```sh
 python -m todoapp           # launch the interactive REPL
 pip install pytest          # one-time: install the test runner
-pytest                      # run all 15 tests (from this directory)
+pytest                      # run all 21 tests (from this directory)
 ```
 
 Run a single test by name:
@@ -42,5 +48,7 @@ pytest tests/test_todo.py::TestTodoService::test_add_trims_title_and_stamps_cloc
 - **Error-handling split.** Invalid input (e.g. empty title) raises
   `ValueError`; "not found" cases return `bool`. The CLI maps the booleans to
   friendly messages.
-- **State is in-memory only** — nothing persists across runs. The CLI seeds two
-  sample items on startup.
+- **State persists across runs.** The CLI wires up a `JsonTodoStore("todos.json")`,
+  so items are loaded on startup and saved after every change. A first run with
+  no `todos.json` starts empty (no seeded samples). Without a store, the service
+  is in-memory only and behaves exactly as before.

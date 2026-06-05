@@ -6,22 +6,36 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 
 from .item import TodoItem
+from .store import JsonTodoStore
 
 
 class TodoService:
-    """In-memory store and operations for todo items.
+    """Store and operations for todo items, optionally backed by a file.
 
     All mutating operations validate input and raise on invalid arguments.
+    When a ``store`` is supplied, existing items are loaded on construction and
+    every mutating operation persists the full list back to the store.
     """
 
-    def __init__(self, clock: Callable[[], datetime] | None = None) -> None:
+    def __init__(
+        self,
+        clock: Callable[[], datetime] | None = None,
+        store: JsonTodoStore | None = None,
+    ) -> None:
         """
         :param clock: Optional time source, injected for deterministic tests.
             Defaults to ``datetime.now(timezone.utc)``.
+        :param store: Optional persistence backend. When provided, items are
+            loaded on init and saved after every mutating operation.
         """
-        self._items: list[TodoItem] = []
         self._clock = clock or (lambda: datetime.now(timezone.utc))
-        self._next_id = 1
+        self._store = store
+        self._items: list[TodoItem] = store.load() if store is not None else []
+        self._next_id = max((i.id for i in self._items), default=0) + 1
+
+    def _persist(self) -> None:
+        if self._store is not None:
+            self._store.save(self._items)
 
     def add(self, title: str) -> TodoItem:
         """Add a new item and return it.
@@ -34,6 +48,7 @@ class TodoService:
         item = TodoItem(self._next_id, title.strip(), self._clock())
         self._next_id += 1
         self._items.append(item)
+        self._persist()
         return item
 
     def get_all(self) -> list[TodoItem]:
@@ -54,6 +69,7 @@ class TodoService:
         if item is None:
             return False
         item.is_done = True
+        self._persist()
         return True
 
     def reopen(self, id: int) -> bool:
@@ -62,6 +78,7 @@ class TodoService:
         if item is None:
             return False
         item.is_done = False
+        self._persist()
         return True
 
     def remove(self, id: int) -> bool:
@@ -70,6 +87,7 @@ class TodoService:
         if item is None:
             return False
         self._items.remove(item)
+        self._persist()
         return True
 
     @property
