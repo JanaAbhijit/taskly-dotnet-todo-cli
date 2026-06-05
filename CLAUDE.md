@@ -4,8 +4,17 @@ Guidance for Claude Code when working in this repository.
 
 ## Project
 
-A small command-line todo app: a .NET 10 solution split into a core library
-(all logic), a console REPL, and an xUnit test project.
+A small command-line todo app, implemented twice with identical behavior:
+
+- **.NET 10** (repo root) — a solution split into a core library (all logic), a
+  console REPL, and an xUnit test project. This is the primary/reference version.
+- **Python 3.10+** (`python/`) — an idiomatic port with the same architecture: a
+  core package (all logic), a console REPL, and a pytest suite. See
+  [`python/README.md`](python/README.md).
+
+Both share the same design: inward-pointing dependencies, an injectable clock,
+the error-handling split, in-memory state, and 15 tests. When changing behavior,
+keep the two implementations in sync.
 
 ## Commands
 
@@ -97,3 +106,41 @@ dotnet test --collect:"XPlat Code Coverage"   # writes coverage.cobertura.xml un
 - Coverage includes: ID assignment and non-reuse, title trimming, empty-title
   rejection, complete/reopen/remove (happy and unknown-id paths), status
   filtering, insertion order, and `ToString` formatting.
+
+## Python port (`python/`)
+
+An idiomatic mirror of the .NET solution. Same architecture, dependencies point
+inward — `cli → service → item`; `item` depends on nothing.
+
+```sh
+cd python
+python -m todoapp           # launch the interactive REPL
+python -m pytest -q         # run all 15 tests (expect: 15 passed)
+```
+
+Run a single test by name:
+
+```sh
+python -m pytest tests/test_todo.py::TestTodoService::test_add_trims_title_and_stamps_clock
+```
+
+Layout (maps 1:1 to the .NET files):
+
+- **`todoapp/item.py`** — `TodoItem`, a `@dataclass`; `__str__` renders
+  `[x] #3 buy milk` (was `TodoItem.cs`).
+- **`todoapp/service.py`** — `TodoService`: `add`, `complete`, `reopen`,
+  `remove`, `find`, `get_all`, `get_by_status`, `count` (was `TodoService.cs`).
+- **`todoapp/cli.py`** — thin REPL; same commands and aliases (was `Program.cs`).
+- **`tests/test_todo.py`** — `TestTodoService` / `TestTodoItem`, 15 tests.
+
+Conventions match the .NET version, translated to Python idiom:
+
+- Logic stays in `service.py`, not the CLI.
+- Injectable clock is a `Callable[[], datetime] | None`, defaulting to
+  `datetime.now(timezone.utc)`; tests pass `lambda: FIXED_NOW`.
+- Error-handling split: invalid input raises `ValueError` (the analogue of
+  `ArgumentException`); "not found" returns `bool`.
+- The empty-title case uses `@pytest.mark.parametrize` (the analogue of
+  `[Theory]` + `[InlineData]`), keeping the suite at 15 tests.
+- Targets Python 3.10+ (uses `X | None` unions and built-in generics); no
+  third-party runtime deps, pytest is the only dev dependency.

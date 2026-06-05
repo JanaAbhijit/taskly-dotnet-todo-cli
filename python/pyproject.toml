@@ -1,0 +1,21 @@
+[project]
+name = "todoapp"
+version = "1.0.0"
+description = "A small command-line todo app (ported from .NET to Python)."
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+todoapp = "todoapp.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["todoapp*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
