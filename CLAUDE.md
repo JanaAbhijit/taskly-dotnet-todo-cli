@@ -53,9 +53,47 @@ Three projects. Dependencies point inward — `Cli → Core` and `Tests → Core
   sample items on startup.
 - All projects target `net10.0` with `Nullable` and `ImplicitUsings` enabled.
 
+## Running the tests
+
+Run from the repo root (`C:\Work\ClaudeEx`). The test framework is xUnit; the
+runner is `dotnet test`.
+
+```sh
+dotnet test                                   # build + run all 15 tests
+dotnet test tests/TodoApp.Tests               # run only this test project
+dotnet test --no-build                        # skip rebuild (faster, if already built)
+dotnet test -v normal                         # more verbose output
+```
+
+Run a subset with `--filter`:
+
+```sh
+# one test by full name
+dotnet test --filter "FullyQualifiedName~TodoServiceTests.Add_TrimsTitle_AndStampsClock"
+
+# every test in one class
+dotnet test --filter "FullyQualifiedName~TodoServiceTests"
+
+# all the Add_* tests
+dotnet test --filter "FullyQualifiedName~TodoService.Add"
+```
+
+A green run ends with: `Passed!  - Failed: 0, Passed: 15, Skipped: 0`.
+
+Collect code coverage (built-in collector):
+
+```sh
+dotnet test --collect:"XPlat Code Coverage"   # writes coverage.cobertura.xml under TestResults/
+```
+
 ## Testing notes
 
-- Tests construct the service with a fixed clock: `new TodoService(() => FixedNow)`.
+- Tests live in `tests/TodoApp.Tests/TodoServiceTests.cs` (`TodoServiceTests` and
+  `TodoItemTests` classes) and target `TodoApp.Core` directly — no CLI involved.
+- Tests construct the service with a fixed clock: `new TodoService(() => FixedNow)`,
+  so `CreatedAt` assertions are deterministic. Keep this pattern for new tests.
+- Use `[Fact]` for single cases and `[Theory]` + `[InlineData]` for parameterized
+  ones (see `Add_RejectsEmptyTitle`).
 - Coverage includes: ID assignment and non-reuse, title trimming, empty-title
   rejection, complete/reopen/remove (happy and unknown-id paths), status
   filtering, insertion order, and `ToString` formatting.
